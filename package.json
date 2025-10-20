@@ -1,0 +1,19 @@
+{
+  "name": "euroleague-scraper",
+  "version": "1.0.0",
+  "description": "A simple web scraper that extracts data using CSS selectors and exports to CSV",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node euroleague-scraper.js",
+    "scrape": "node euroleague-scraper.js",
+    "euroleague": "node euroleague-scraper.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.5.2",
+    "csv-writer": "^1.6.0",
+    "commander": "^11.1.0"
+  },
+  "keywords": ["scraper", "web-scraping", "csv", "puppeteer"],
+  "author": "",
+  "license": "MIT"
+}
