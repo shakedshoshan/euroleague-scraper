@@ -5,13 +5,13 @@
 const CONFIGS = [
     {
         // URL to scrape
-        URL: 'https://www.euroleaguebasketball.net/euroleague/stats/expanded/?size=1000&viewType=traditional&seasonMode=Single&statisticMode=perGame&seasonCode=E2024&sortDirection=ascending&statistic=',
+        URL: 'https://www.dunkest.com/en/euroleague/stats/players/table?season_id=23&mode=dunkest&stats_type=tot&weeks[]=5&rounds[]=1&rounds[]=2&teams[]=32&teams[]=33&teams[]=34&teams[]=35&teams[]=36&teams[]=37&teams[]=38&teams[]=39&teams[]=40&teams[]=41&teams[]=42&teams[]=43&teams[]=44&teams[]=45&teams[]=46&teams[]=47&teams[]=48&teams[]=56&teams[]=60&teams[]=75&positions[]=1&positions[]=2&positions[]=3&player_search=&min_cr=4&max_cr=35&sort_by=pdk&sort_order=desc&iframe=yes&noadv=yes',
         
         // CSS selector for the data table
-        SELECTOR: '#main > section > div.lg\\:p-6.bg-light > div > div > div > div.complex-stat-table_shadowWrap__wIJgS.complex-stat-table__manyCols__o3_D4 > div > div',
+        SELECTOR: 'body > main > div.mt-4.table-stats__container > table',
         
         // Output filename (will be saved in results/ folder)
-        FILENAME: '2024_clean.csv',
+        FILENAME: 'dunkest_2024.csv',
         
         // Wait time in seconds (for dynamic content to load)
         WAIT_TIME: 5,
@@ -19,38 +19,6 @@ const CONFIGS = [
         // Browser settings
         HEADLESS: true, // Set to false to see the browser window
         TIMEOUT: 30000, // Page load timeout in milliseconds
-    },
-    // {
-    //     URL: 'https://www.euroleaguebasketball.net/euroleague/stats/expanded/?size=1000&viewType=traditional&seasonMode=Single&statisticMode=perGame&seasonCode=E2023&sortDirection=ascending&statistic=',
-    //     SELECTOR: '#main > section > div.lg\\:p-6.bg-light > div > div > div > div.complex-stat-table_shadowWrap__wIJgS.complex-stat-table__manyCols__o3_D4 > div > div',
-    //     FILENAME: '2023.csv',
-    //     WAIT_TIME: 5,
-    //     HEADLESS: true,
-    //     TIMEOUT: 30000,
-    // },
-    // {
-    //     URL: 'https://www.euroleaguebasketball.net/euroleague/stats/expanded/?size=1000&viewType=traditional&seasonMode=Single&statisticMode=perGame&seasonCode=E2022&sortDirection=ascending&statistic=',
-    //     SELECTOR: '#main > section > div.lg\\:p-6.bg-light > div > div > div > div.complex-stat-table_shadowWrap__wIJgS.complex-stat-table__manyCols__o3_D4 > div > div',
-    //     FILENAME: '2022.csv',
-    //     WAIT_TIME: 5,
-    //     HEADLESS: true,
-    //     TIMEOUT: 30000,
-    // },
-    // {
-    //     URL: 'https://www.euroleaguebasketball.net/euroleague/stats/expanded/?size=1000&viewType=traditional&seasonMode=Single&statisticMode=perGame&seasonCode=E2021&sortDirection=ascending&statistic=',
-    //     SELECTOR: '#main > section > div.lg\\:p-6.bg-light > div > div > div > div.complex-stat-table_shadowWrap__wIJgS.complex-stat-table__manyCols__o3_D4 > div > div',
-    //     FILENAME: '2021.csv',
-    //     WAIT_TIME: 5,
-    //     HEADLESS: true,
-    //     TIMEOUT: 30000,
-    // },
-    {
-        URL: 'https://www.euroleaguebasketball.net/euroleague/stats/expanded/?size=1000&viewType=traditional&seasonMode=Single&statisticMode=perGame&seasonCode=E2020&sortDirection=ascending&statistic=',
-        SELECTOR: '#main > section > div.lg\\:p-6.bg-light > div > div > div > div.complex-stat-table_shadowWrap__wIJgS.complex-stat-table__manyCols__o3_D4 > div > div',
-        FILENAME: '2020.csv',
-        WAIT_TIME: 5,
-        HEADLESS: true,
-        TIMEOUT: 30000,
     }
 ];
 
@@ -94,26 +62,55 @@ class EuroLeagueScraper {
             const data = await this.page.evaluate(() => {
                 const results = [];
                 
-                // Find all table rows
-                const rows = document.querySelectorAll('.complex-stat-table_row__XPRhI');
+                // Try multiple selectors to find the table
+                let table = document.querySelector('body > main > div.mt-4.table-stats__container > table');
+                if (!table) {
+                    // Try alternative selectors
+                    table = document.querySelector('table');
+                    if (!table) {
+                        table = document.querySelector('.table-stats__container table');
+                    }
+                }
+                
+                if (!table) {
+                    console.log('Table not found with any selector');
+                    return results;
+                }
+                
+                // Find all table rows (skip header row)
+                let rows = table.querySelectorAll('tbody tr');
+                if (rows.length === 0) {
+                    // If no tbody, try all tr elements
+                    rows = table.querySelectorAll('tr');
+                }
                 
                 rows.forEach((row, index) => {
-                    // Skip header rows or rows that contain "Team" or other header text
-                    const rowText = row.textContent.toLowerCase();
-                    if (rowText.includes('team') || rowText.includes('player') || rowText.includes('rank') || rowText.includes('games played')) {
+                    // Skip header rows or empty rows
+                    const rowText = row.textContent.toLowerCase().trim();
+                    if (rowText === '' || rowText.includes('player') || rowText.includes('team') || rowText.includes('rank') || rowText.includes('position')) {
                         return; // Skip this row
                     }
+                    
                     const rowData = {
                         rank: '',
                         player_name: '',
+                        position: '',
                         team: '',
+                        fantasy_points: '',
+                        credits: '',
+                        plus: '',
                         games_played: '',
-                        games_started: '',
                         minutes: '',
+                        starter: '',
                         points: '',
-                        two_point_made: '',
-                        two_point_attempted: '',
-                        two_point_percentage: '',
+                        rebounds: '',
+                        assists: '',
+                        steals: '',
+                        blocks: '',
+                        blocks_against: '',
+                        field_goals_made: '',
+                        field_goals_attempted: '',
+                        field_goal_percentage: '',
                         three_point_made: '',
                         three_point_attempted: '',
                         three_point_percentage: '',
@@ -122,76 +119,57 @@ class EuroLeagueScraper {
                         free_throw_percentage: '',
                         offensive_rebounds: '',
                         defensive_rebounds: '',
-                        total_rebounds: '',
-                        assists: '',
-                        steals: '',
                         turnovers: '',
-                        blocks: '',
-                        blocks_against: '',
-                        fouls_committed: '',
+                        personal_fouls: '',
                         fouls_drawn: '',
-                        performance_index_rating: ''
+                        plus_minus: ''
                     };
                     
                     // Get all cells in the row
-                    const cells = row.querySelectorAll('p.font-modelica.text-primary.text-sm.font-normal.complex-stat-table_cell__XIEO5');
+                    const cells = row.querySelectorAll('td');
                     const allStats = Array.from(cells).map(cell => cell.textContent.trim());
                     
-                    // Extract player name and team from specific elements
-                    const playerLink = row.querySelector('.complex-stat-table_playerLink__y9Nyp');
-                    if (playerLink) {
-                        const longName = playerLink.querySelector('.complex-stat-table_longValue__c7emT');
-                        const shortName = playerLink.querySelector('.complex-stat-table_shortValue__5WGW6');
-                        rowData.player_name = longName ? longName.textContent.trim() : (shortName ? shortName.textContent.trim() : '');
+                    // Extract data based on the actual table structure
+                    // Column order: #, Player, Pos, Team, FPT, CR, PLUS, GP, MIN, ST, PTS, REB, AST, STL, BLK, BA, FGM, FGA, FG%, 3PM, 3PA, 3P%, FTM, FTA, FT%, OREB, DREB, TOV, PF, FD, +/-
+                    if (allStats.length > 0) {
+                        // Map data by exact column position - shifted one left
+                        rowData.rank = (index + 1).toString(); // Use serial number instead of table data
+                        rowData.player_name = allStats[0] || ''; // Player name is now in position 0
+                        rowData.position = allStats[1] || ''; // Position is now in position 1
+                        rowData.team = allStats[2] || ''; // Team is now in position 2
+                        rowData.fantasy_points = allStats[3] || ''; // FPT is now in position 3
+                        rowData.credits = allStats[4] || ''; // CR is now in position 4
+                        rowData.plus = allStats[5] || ''; // PLUS is now in position 5
+                        rowData.games_played = allStats[6] || ''; // GP is now in position 6
+                        rowData.minutes = allStats[7] || ''; // MIN is now in position 7
+                        rowData.starter = allStats[8] || ''; // ST is now in position 8
+                        rowData.points = allStats[9] || ''; // PTS is now in position 9
+                        rowData.rebounds = allStats[10] || ''; // REB is now in position 10
+                        rowData.assists = allStats[11] || ''; // AST is now in position 11
+                        rowData.steals = allStats[12] || ''; // STL is now in position 12
+                        rowData.blocks = allStats[13] || ''; // BLK is now in position 13
+                        rowData.blocks_against = allStats[14] || ''; // BA is now in position 14
+                        rowData.field_goals_made = allStats[15] || ''; // FGM is now in position 15
+                        rowData.field_goals_attempted = allStats[16] || ''; // FGA is now in position 16
+                        rowData.field_goal_percentage = allStats[17] || ''; // FG% is now in position 17
+                        rowData.three_point_made = allStats[18] || ''; // 3PM is now in position 18
+                        rowData.three_point_attempted = allStats[19] || ''; // 3PA is now in position 19
+                        rowData.three_point_percentage = allStats[20] || ''; // 3P% is now in position 20
+                        rowData.free_throws_made = allStats[21] || ''; // FTM is now in position 21
+                        rowData.free_throws_attempted = allStats[22] || ''; // FTA is now in position 22
+                        rowData.free_throw_percentage = allStats[23] || ''; // FT% is now in position 23
+                        rowData.offensive_rebounds = allStats[24] || ''; // OREB is now in position 24
+                        rowData.defensive_rebounds = allStats[25] || ''; // DREB is now in position 25
+                        rowData.turnovers = allStats[26] || ''; // TOV is now in position 26
+                        rowData.personal_fouls = allStats[27] || ''; // PF is now in position 27
+                        rowData.fouls_drawn = allStats[28] || ''; // FD is now in position 28
+                        rowData.plus_minus = allStats[29] || ''; // +/- is now in position 29
                     }
                     
-                    // Extract team from the team cell (look for the cell that contains team abbreviation)
-                    const teamCells = row.querySelectorAll('.complex-stat-table_cell__XIEO5');
-                    for (let i = 0; i < teamCells.length; i++) {
-                        const cellText = teamCells[i].textContent.trim();
-                        // Look for team abbreviation (usually 3-4 characters, not a number)
-                        if (cellText.length >= 2 && cellText.length <= 4 && isNaN(cellText) && !cellText.includes('%') && !cellText.includes(':') && !cellText.includes('.')) {
-                            rowData.team = cellText;
-                            break;
-                        }
-                    }
-                    
-                    // Map the stats array to our data structure
-                    // The stats array should contain: rank, games_played, games_started, minutes, points, etc.
-                    if (allStats.length >= 25) {
-                        rowData.rank = allStats[0] || '';
-                        rowData.games_played = allStats[1] || '';
-                        rowData.games_started = allStats[2] || '';
-                        rowData.minutes = allStats[3] || '';
-                        rowData.points = allStats[4] || '';
-                        rowData.two_point_made = allStats[5] || '';
-                        rowData.two_point_attempted = allStats[6] || '';
-                        rowData.two_point_percentage = allStats[7] || '';
-                        rowData.three_point_made = allStats[8] || '';
-                        rowData.three_point_attempted = allStats[9] || '';
-                        rowData.three_point_percentage = allStats[10] || '';
-                        rowData.free_throws_made = allStats[11] || '';
-                        rowData.free_throws_attempted = allStats[12] || '';
-                        rowData.free_throw_percentage = allStats[13] || '';
-                        rowData.offensive_rebounds = allStats[14] || '';
-                        rowData.defensive_rebounds = allStats[15] || '';
-                        rowData.total_rebounds = allStats[16] || '';
-                        rowData.assists = allStats[17] || '';
-                        rowData.steals = allStats[18] || '';
-                        rowData.turnovers = allStats[19] || '';
-                        rowData.blocks = allStats[20] || '';
-                        rowData.blocks_against = allStats[21] || '';
-                        rowData.fouls_committed = allStats[22] || '';
-                        rowData.fouls_drawn = allStats[23] || '';
-                        rowData.performance_index_rating = allStats[24] || '';
-                    }
-                    
-                    // If we still don't have a rank, use the index
-                    if (!rowData.rank || rowData.rank === '') {
-                        rowData.rank = (index + 1).toString();
-                    }
-                    
+                    // Only add if we have meaningful data
+                    if (rowData.player_name && rowData.player_name !== '') {
                     results.push(rowData);
+                    }
                 });
                 
                 return results;
@@ -221,33 +199,37 @@ class EuroLeagueScraper {
         
         // Define proper headers for Excel compatibility
         const headers = [
-            { id: 'rank', title: 'Rank' },
-            { id: 'player_name', title: 'Player Name' },
+            { id: 'rank', title: '#' },
+            { id: 'player_name', title: 'Player' },
+            { id: 'position', title: 'Pos' },
             { id: 'team', title: 'Team' },
-            { id: 'games_played', title: 'Games Played' },
-            { id: 'games_started', title: 'Games Started' },
-            { id: 'minutes', title: 'Minutes' },
-            { id: 'points', title: 'Points' },
-            { id: 'two_point_made', title: '2PM' },
-            { id: 'two_point_attempted', title: '2PA' },
-            { id: 'two_point_percentage', title: '2P%' },
+            { id: 'fantasy_points', title: 'FPT' },
+            { id: 'credits', title: 'CR' },
+            { id: 'plus', title: 'PLUS' },
+            { id: 'games_played', title: 'GP' },
+            { id: 'minutes', title: 'MIN' },
+            { id: 'starter', title: 'ST' },
+            { id: 'points', title: 'PTS' },
+            { id: 'rebounds', title: 'REB' },
+            { id: 'assists', title: 'AST' },
+            { id: 'steals', title: 'STL' },
+            { id: 'blocks', title: 'BLK' },
+            { id: 'blocks_against', title: 'BA' },
+            { id: 'field_goals_made', title: 'FGM' },
+            { id: 'field_goals_attempted', title: 'FGA' },
+            { id: 'field_goal_percentage', title: 'FG%' },
             { id: 'three_point_made', title: '3PM' },
             { id: 'three_point_attempted', title: '3PA' },
             { id: 'three_point_percentage', title: '3P%' },
             { id: 'free_throws_made', title: 'FTM' },
             { id: 'free_throws_attempted', title: 'FTA' },
             { id: 'free_throw_percentage', title: 'FT%' },
-            { id: 'offensive_rebounds', title: 'OR' },
-            { id: 'defensive_rebounds', title: 'DR' },
-            { id: 'total_rebounds', title: 'TR' },
-            { id: 'assists', title: 'AST' },
-            { id: 'steals', title: 'STL' },
-            { id: 'turnovers', title: 'TO' },
-            { id: 'blocks', title: 'BLK' },
-            { id: 'blocks_against', title: 'BLKA' },
-            { id: 'fouls_committed', title: 'FC' },
+            { id: 'offensive_rebounds', title: 'OREB' },
+            { id: 'defensive_rebounds', title: 'DREB' },
+            { id: 'turnovers', title: 'TOV' },
+            { id: 'personal_fouls', title: 'PF' },
             { id: 'fouls_drawn', title: 'FD' },
-            { id: 'performance_index_rating', title: 'PIR' }
+            { id: 'plus_minus', title: '+/-' }
         ];
         
         const csvWriter = createCsvWriter({
