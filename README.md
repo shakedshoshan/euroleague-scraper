@@ -10,7 +10,6 @@ A specialized web scraper that extracts EuroLeague basketball player statistics 
 - ⏳ **Smart Waiting** - Configurable wait times for dynamic content loading
 - 🛡️ **Error Handling** - Robust error handling with detailed progress reporting
 - 🔄 **Batch Processing** - Scrapes all seasons in sequence with progress tracking
-- ⚙️ **Easy Configuration** - All settings at the top of the file for easy modification
 - 🧹 **Clean Data** - Automatically filters out header rows and duplicates
 - 🎯 **Accurate Extraction** - Properly extracts player names, teams, and all statistics
 
