@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node euroleague-scraper.js",
     "scrape": "node euroleague-scraper.js",
-    "euroleague": "node euroleague-scraper.js"
+    "euroleague": "node euroleague-scraper.js",
+    "givemestats": "node givemestats-scraper.js"
   },
   "dependencies": {
     "puppeteer": "^21.5.2",
